@@ -1,0 +1,44 @@
+
+x-server_env: &server_env
+  environment:
+    # База данных
+    - POSTGRES_DB
+    - POSTGRES_USER
+    - POSTGRES_PASSWORD
+    - POSTGRES_PORT
+    - POSTGRES_HOST
+    - API_KEY
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: server_test_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    <<: *server_env
+
+  server:
+    build:
+      context: ./server
+    container_name: server_test
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - .:/app
+    <<: *server_env
+
+volumes:
+  postgres_data:
+
