@@ -105,7 +105,7 @@ TestCase/
 │   │   └── main.py          # Точка входа FastAPI
 │   ├── migrations/          # Alembic миграции
 │   │   └── versions/
-│   ├── generate_test_data.py # Скрипт генерации данных
+│   ├── seed_data.py         # Скрипт генерации тестовых данных
 │   ├── alembic.ini          # Конфигурация Alembic
 │   └── requirements.txt     # Python зависимости
 ├── docker-compose.yml       # Конфигурация Docker
@@ -227,10 +227,27 @@ alembic upgrade head
 docker exec server_test python -m pytest
 ```
 
-### Генерация тестовых данных
+### Генерация тестовых данных вручную
 
 ```bash
-docker exec server_test python /app/server/generate_test_data.py
+docker exec server_test python -c "from server.seed_data import seed_data; seed_data()"
+```
+
+Или для очистки БД и пересоздания данных:
+
+```bash
+docker exec server_test python -c "
+from server.core.db import SessionLocal
+from server.core.models import Phone, Enterprise, Address, Domain
+from server.seed_data import seed_data
+
+db = SessionLocal()
+[db.query(m).delete() for m in [Phone, Enterprise, Address, Domain]]
+db.commit()
+db.close()
+
+seed_data()
+"
 ```
 
 ## Особенности реализации

@@ -47,22 +47,19 @@ def init_test_data():
             print("="*60)
             print("Первый запуск - генерация тестовых данных...")
             print("="*60)
+            db.close()
 
-            script_path = os.path.join(os.path.dirname(__file__), "..", "generate_test_data.py")
-            result = subprocess.run(
-                [sys.executable, script_path],
-                capture_output=True,
-                text=True
-            )
-            if result.returncode == 0:
-                print("[OK] Тестовые данные успешно созданы!")
-                print(result.stdout)
-            else:
-                print(f"[ERR] Ошибка создания данных: {result.stderr}")
+            from server.seed_data import seed_data
+            seed_data()
+
+            print("[OK] Тестовые данные успешно созданы!")
     except Exception as e:
         print(f"[ERR] Ошибка инициализации: {e}")
     finally:
-        db.close()
+        try:
+            db.close()
+        except:
+            pass
 
 
 @asynccontextmanager
