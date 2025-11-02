@@ -43,7 +43,7 @@ Enterprise-уровень REST API для управления предприя�
 ### 1. Клонирование репозитория
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/AlexLovser/TestCase/tree/main
 cd TestCase
 ```
 
