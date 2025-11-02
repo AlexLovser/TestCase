@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError
 from server.core.schemas.address import CreateAddressModel, AddressResponseModel, UpdateAddressModel
@@ -6,6 +6,7 @@ from server.core.db import get_db
 from sqlalchemy.orm import Session
 from server.core.models.address import Address
 from typing import List
+from server.core.security import verify_api_key
 
 
 router = APIRouter(
@@ -25,13 +26,20 @@ class AddressNotFoundError(HTTPException):
 
 @router.get("", response_model=List[AddressResponseModel],
     summary="Список адресов")
-def list_addresses(db: Session = Depends(get_db)):
+def list_addresses(
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     return db.query(Address).all()
 
 
 @router.get("/{address_id}", response_model=AddressResponseModel,
     summary="Получить адрес")
-def retrieve_address(address_id: int, db: Session = Depends(get_db)):
+def retrieve_address(
+    address_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     address = db.query(Address).filter(Address.id == address_id).first()
     if not address:
         raise AddressNotFoundError(address_id)
@@ -41,7 +49,11 @@ def retrieve_address(address_id: int, db: Session = Depends(get_db)):
 @router.get("/{address_id}/enterprises", response_model=List[dict],
     summary="Предприятия по адресу",
     description="Получить список всех организаций находящихся по данному адресу")
-def get_enterprises_at_address(address_id: int, db: Session = Depends(get_db)):
+def get_enterprises_at_address(
+    address_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     from server.core.models.enterprise import Enterprise
 
     address = db.query(Address).filter(Address.id == address_id).first()
@@ -64,7 +76,11 @@ def get_enterprises_at_address(address_id: int, db: Session = Depends(get_db)):
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=AddressResponseModel,
     summary="Создать адрес",
     description="Обычно адреса создаются автоматически вместе с предприятиями")
-def create_addresses(payload: CreateAddressModel, db: Session = Depends(get_db)):
+def create_addresses(
+    payload: CreateAddressModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     try:
         address = Address(address=payload.address, latitude=payload.latitude, longitude=payload.longitude)
         db.add(address)
@@ -78,7 +94,12 @@ def create_addresses(payload: CreateAddressModel, db: Session = Depends(get_db))
 
 @router.put("/{address_id}", response_model=AddressResponseModel,
     summary="Полная замена адреса")
-def replace_address(address_id: int, payload: CreateAddressModel, db: Session = Depends(get_db)):
+def replace_address(
+    address_id: int,
+    payload: CreateAddressModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     address = db.query(Address).filter(Address.id == address_id).first()
     if not address:
         raise AddressNotFoundError(address_id)
@@ -96,7 +117,12 @@ def replace_address(address_id: int, payload: CreateAddressModel, db: Session = 
 
 @router.patch("/{address_id}", response_model=AddressResponseModel,
     summary="Обновить адрес")
-def update_address(address_id: int, payload: UpdateAddressModel, db: Session = Depends(get_db)):
+def update_address(
+    address_id: int,
+    payload: UpdateAddressModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     address = db.query(Address).filter(Address.id == address_id).first()
     if not address:
         raise AddressNotFoundError(address_id)

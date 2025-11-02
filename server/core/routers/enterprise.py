@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from typing import List
@@ -10,6 +10,7 @@ from server.core.schemas.enterprise import (
 from server.core.models import Enterprise, Address, Phone
 from server.core.db import get_db
 from server.core.utils.rings import EarthRing
+from server.core.security import verify_api_key
 
 
 # Константы
@@ -50,28 +51,43 @@ def get_enterprises_query(db: Session):
     )
 
 @router.get("", response_model=List[EnterpriseResponseModel], summary="Список всех предприятий")
-def get_enterprises(db: Session = Depends(get_db)):
+def get_enterprises(
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     return get_enterprises_query(db).all()
 
 
 @router.get("/search/", response_model=List[EnterpriseResponseModel],
     summary="Поиск предприятий по названию",
     description="Поиск предприятий по частичному совпадению в названии (регистр не важен)")
-def search_enterprises(q: str, db: Session = Depends(get_db)):
+def search_enterprises(
+    q: str,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     return get_enterprises_query(db).filter(Enterprise.name.ilike(f"%{q}%")).all()
 
 
 @router.get("/with_address/", response_model=List[EnterpriseResponseModel],
     summary="Поиск предприятий по адресу",
     description="Поиск предприятий по частичному совпадению в адресе")
-def get_enterprises_by_address(q: str, db: Session = Depends(get_db)):
+def get_enterprises_by_address(
+    q: str,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     return get_enterprises_query(db).join(Address).filter(Address.address.ilike(f"%{q}%")).all()
 
 
 @router.get("/at_address/{address_id}", response_model=List[EnterpriseResponseModel],
     summary="Все предприятия в здании",
     description="Получить список всех организаций находящихся по конкретному адресу")
-def get_enterprises_at_address(address_id: int, db: Session = Depends(get_db)):
+def get_enterprises_at_address(
+    address_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     address = db.query(Address).filter(Address.id == address_id).first()
     if not address:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"Address {address_id} not found")
@@ -86,7 +102,8 @@ def get_enterprises_in_circle(
     x: float,
     y: float,
     r: float,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
 ):
     earth = EarthRing()
     center = earth.to_flat((x, y))
@@ -108,7 +125,8 @@ def get_enterprises_in_frame(
     y1: float,
     x2: float,
     y2: float,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
 ):
     earth = EarthRing()
     corner1 = earth.to_flat((x1, y1))
@@ -135,7 +153,8 @@ def get_enterprises_in_frame(
 def get_enterprises_by_domain(
     domain_id: int,
     include_children: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
 ):
     from server.core.models.domain import Domain
 
@@ -153,7 +172,11 @@ def get_enterprises_by_domain(
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=EnterpriseResponseModel,
     summary="Создать предприятие",
     description="Создает новое предприятие с адресом и телефонами")
-def create_enterprises(payload: CreateEnterpriseModel, db: Session = Depends(get_db)):
+def create_enterprises(
+    payload: CreateEnterpriseModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     try:
         address = Address(
             address=payload.address.address,
@@ -190,7 +213,12 @@ def create_enterprises(payload: CreateEnterpriseModel, db: Session = Depends(get
 
 @router.put("/{enterprise_id}", response_model=EnterpriseResponseModel,
     summary="Полная замена предприятия")
-def replace_enterprises(enterprise_id: int, payload: CreateEnterpriseModel, db: Session = Depends(get_db)):
+def replace_enterprises(
+    enterprise_id: int,
+    payload: CreateEnterpriseModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
     if not enterprise:
         raise EnterpriseNotFoundError(enterprise_id)
@@ -219,7 +247,12 @@ def replace_enterprises(enterprise_id: int, payload: CreateEnterpriseModel, db: 
 @router.patch("/{enterprise_id}", response_model=EnterpriseResponseModel,
     summary="Обновить предприятие",
     description="Частичное обновление предприятия. Телефоны заменяются полностью (set операция)")
-def update_enterprises(enterprise_id: int, payload: UpdateEnterpriseModel, db: Session = Depends(get_db)):
+def update_enterprises(
+    enterprise_id: int,
+    payload: UpdateEnterpriseModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     enterprise = db.query(Enterprise).filter(Enterprise.id == enterprise_id).first()
     if not enterprise:
         raise EnterpriseNotFoundError(enterprise_id)

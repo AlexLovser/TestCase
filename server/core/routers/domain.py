@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from typing import List
 from server.core.schemas.domain import *
 from server.core.models.domain import Domain
 from server.core.db import get_db
+from server.core.security import verify_api_key
 
 
 # Константы
@@ -52,13 +53,20 @@ def calculate_depth(domain_id: int, db: Session) -> int:
 @router.get("", response_model=List[DomainBaseResponseModel],
     summary="Список доменов",
     description="Получить список всех видов деятельности")
-def list_domains(db: Session = Depends(get_db)):
+def list_domains(
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     return db.query(Domain).all()
 
 
 @router.get("/{domain_id}", response_model=DomainResponseModel,
     summary="Получить домен")
-def retrieve_domain(domain_id: int, db: Session = Depends(get_db)):
+def retrieve_domain(
+    domain_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     domain = db.query(Domain).filter(Domain.id == domain_id).first()
     if not domain:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
@@ -68,7 +76,11 @@ def retrieve_domain(domain_id: int, db: Session = Depends(get_db)):
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=DomainBaseResponseModel,
     summary="Создать домен",
     description="Создать новый вид деятельности. Максимальная глубина дерева - 3 уровня")
-def create_domain(payload: CreateDomainModel, db: Session = Depends(get_db)):
+def create_domain(
+    payload: CreateDomainModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     if payload.parent_id and calculate_depth(payload.parent_id, db) >= MAX_DEPTH:
         raise DomainDepthExceededError()
 
@@ -87,7 +99,12 @@ def create_domain(payload: CreateDomainModel, db: Session = Depends(get_db)):
 
 @router.put("/{domain_id}", response_model=DomainResponseModel,
     summary="Полная замена домена")
-def replace_domain(domain_id: int, payload: CreateDomainModel, db: Session = Depends(get_db)):
+def replace_domain(
+    domain_id: int,
+    payload: CreateDomainModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     domain = db.query(Domain).filter(Domain.id == domain_id).first()
     if not domain:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
@@ -102,7 +119,12 @@ def replace_domain(domain_id: int, payload: CreateDomainModel, db: Session = Dep
 
 @router.patch("/{domain_id}", response_model=DomainResponseModel,
     summary="Обновить домен")
-def update_domain(domain_id: int, payload: UpdateDomainModel, db: Session = Depends(get_db)):
+def update_domain(
+    domain_id: int,
+    payload: UpdateDomainModel,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     domain = db.query(Domain).filter(Domain.id == domain_id).first()
     if not domain:
         raise DomainNotFoundError(domain_id)
@@ -126,7 +148,11 @@ def update_domain(domain_id: int, payload: UpdateDomainModel, db: Session = Depe
 
 @router.delete("/{domain_id}", status_code=status.HTTP_204_NO_CONTENT,
     summary="Удалить домен")
-def delete_domain(domain_id: int, db: Session = Depends(get_db)):
+def delete_domain(
+    domain_id: int,
+    db: Session = Depends(get_db),
+    api_key: str = Security(verify_api_key)
+):
     domain = db.query(Domain).filter(Domain.id == domain_id).first()
     if not domain:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
