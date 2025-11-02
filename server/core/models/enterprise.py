@@ -16,7 +16,7 @@ class Enterprise(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(length=255), unique=True)
     address_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("addresses.id"))
-    address: Mapped["Address"] = relationship("Address", uselist=False)
+    address: Mapped["Address"] = relationship("Address", back_populates="enterprises")
 
     phones: Mapped[List["Phone"]] = relationship("Phone", back_populates="enterprise")
 

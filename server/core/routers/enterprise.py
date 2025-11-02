@@ -68,6 +68,17 @@ def get_enterprises_by_address(q: str, db: Session = Depends(get_db)):
     return get_enterprises_query(db).join(Address).filter(Address.address.ilike(f"%{q}%")).all()
 
 
+@router.get("/at_address/{address_id}", response_model=List[EnterpriseResponseModel],
+    summary="Все предприятия в здании",
+    description="Получить список всех организаций находящихся по конкретному адресу")
+def get_enterprises_at_address(address_id: int, db: Session = Depends(get_db)):
+    address = db.query(Address).filter(Address.id == address_id).first()
+    if not address:
+        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f"Address {address_id} not found")
+
+    return get_enterprises_query(db).filter(Enterprise.address_id == address_id).all()
+
+
 @router.get("/in_circle/", response_model=List[EnterpriseResponseModel],
     summary="Поиск в радиусе",
     description="Находит все предприятия в заданном радиусе от точки с координатами (x, y)")

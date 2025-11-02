@@ -1,7 +1,10 @@
 from .base import *
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import Float
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from server.core.models.enterprise import Enterprise
 
 
 class Address(Base):
@@ -12,6 +15,8 @@ class Address(Base):
     latitude: Mapped[float] = mapped_column(Float)
     longitude: Mapped[float] = mapped_column(Float)
 
+    enterprises: Mapped[List["Enterprise"]] = relationship("Enterprise", back_populates="address")
+
     __table_args__ = (
         Index("idx_address_address", address),
         Index("idx_address_latitude", latitude),
@@ -19,4 +24,5 @@ class Address(Base):
     )
 
     def __str__(self) -> str:
-        return f"Address(id={self.id}, address={self.address})"
+        enterprises_count = len(self.enterprises) if self.enterprises else 0
+        return f"Address(id={self.id}, address={self.address}, enterprises={enterprises_count})"

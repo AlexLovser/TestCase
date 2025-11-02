@@ -38,6 +38,29 @@ def retrieve_address(address_id: int, db: Session = Depends(get_db)):
     return address
 
 
+@router.get("/{address_id}/enterprises", response_model=List[dict],
+    summary="Предприятия по адресу",
+    description="Получить список всех организаций находящихся по данному адресу")
+def get_enterprises_at_address(address_id: int, db: Session = Depends(get_db)):
+    from server.core.models.enterprise import Enterprise
+
+    address = db.query(Address).filter(Address.id == address_id).first()
+    if not address:
+        raise AddressNotFoundError(address_id)
+
+    enterprises = db.query(Enterprise).filter(Enterprise.address_id == address_id).all()
+
+    return [
+        {
+            "id": ent.id,
+            "name": ent.name,
+            "domain_id": ent.domain_id,
+            "phones": [phone.phone for phone in ent.phones] if ent.phones else []
+        }
+        for ent in enterprises
+    ]
+
+
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=AddressResponseModel,
     summary="Создать адрес",
     description="Обычно адреса создаются автоматически вместе с предприятиями")

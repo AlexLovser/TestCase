@@ -37,14 +37,17 @@ companies = [
     "ООО Омикрон"
 ]
 
-streets = [
-    "ул. Ленина", "ул. Пушкина", "пр-т Мира", "ул. Гагарина",
-    "ул. Советская", "ул. Кирова", "пр-т Победы", "ул. Молодежная",
-    "ул. Центральная", "ул. Школьная", "пр-т Ленинский", "ул. Садовая",
-    "ул. Новая", "ул. Зеленая", "пр-т Комсомольский", "ул. Рабочая",
-    "ул. Парковая", "ул. Заречная", "пр-т Октябрьский", "ул. Лесная",
-    "ул. Полевая", "ул. Строителей", "пр-т Мирный", "ул. Трудовая",
-    "ул. Дружбы"
+business_centers = [
+    {"street": "ул. Ленина", "house": 15},
+    {"street": "ул. Пушкина", "house": 77},
+    {"street": "пр-т Мира", "house": 9},
+    {"street": "ул. Гагарина", "house": 42},
+    {"street": "ул. Советская", "house": 111},
+    {"street": "ул. Кирова", "house": 25},
+    {"street": "пр-т Победы", "house": 58},
+    {"street": "ул. Центральная", "house": 97},
+    {"street": "пр-т Ленинский", "house": 33},
+    {"street": "ул. Парковая", "house": 51},
 ]
 
 
@@ -74,23 +77,31 @@ def seed_data():
 
         print(f"\n=== Создано доменов: {len(domain_map)} ===")
 
+        print("\n=== Создание бизнес-центров (адресов) ===\n")
+
+        addresses = []
+        for i, bc in enumerate(business_centers):
+            lat = BASE_LAT + random.uniform(-RADIUS, RADIUS)
+            lon = BASE_LON + random.uniform(-RADIUS, RADIUS)
+
+            address = Address(
+                address=f"{bc['street']}, д. {bc['house']}",
+                latitude=lat,
+                longitude=lon
+            )
+            db.add(address)
+            db.flush()
+            addresses.append(address)
+            print(f"[OK] Адрес: {bc['street']}, д. {bc['house']} (id={address.id})")
+
+        print(f"\n=== Создано адресов: {len(addresses)} ===")
         print("\n=== Создание 25 тестовых предприятий ===\n")
 
         domain_ids = list(domain_map.values())
         created_count = 0
 
         for i in range(25):
-            lat = BASE_LAT + random.uniform(-RADIUS, RADIUS)
-            lon = BASE_LON + random.uniform(-RADIUS, RADIUS)
-            house = random.randint(1, 150)
-
-            address = Address(
-                address=f"{streets[i]}, д. {house}",
-                latitude=lat,
-                longitude=lon
-            )
-            db.add(address)
-            db.flush()
+            address = random.choice(addresses)
 
             domain_id = random.choice(domain_ids) if domain_ids else None
             enterprise = Enterprise(
@@ -106,7 +117,7 @@ def seed_data():
                 db.add(phone)
 
             created_count += 1
-            print(f"[OK] {companies[i]} ({lat:.4f}, {lon:.4f})")
+            print(f"[OK] {companies[i]} -> {address.address}")
 
         db.commit()
         print(f"\n=== Создано предприятий: {created_count} ===")
